@@ -139,6 +139,7 @@ function initLivePrayerDemo() {
   }
 
   function formatTime(seconds) {
+    seconds = Math.max(0, seconds);
     const hrs = Math.floor(seconds / 3600);
     const mins = Math.floor((seconds % 3600) / 60);
     const secs = seconds % 60;

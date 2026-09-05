@@ -1951,14 +1951,11 @@ body.menu-open {
 @media (max-width: 992px) {
   .hamburger-btn {
     display: flex;
+    z-index: 2001; /* Ensure hamburger stays above the main-nav overlay */
   }
 
   .nav-btn {
     display: none;
-  }
-
-  .mobile-nav-backdrop {
-    display: none; /* The main-nav will act as the backdrop */
   }
 
   .main-nav {
@@ -1975,10 +1972,9 @@ body.menu-open {
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    padding: 2rem;
     opacity: 0;
     visibility: hidden;
-    transform: scale(1.05); /* Slight scale down effect */
+    transform: scale(1.03); /* Subtle scale effect */
     transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
     pointer-events: none;
   }
@@ -1990,77 +1986,45 @@ body.menu-open {
     pointer-events: auto;
   }
 
-  .mobile-nav-header {
-    position: absolute;
-    top: 1.5rem;
-    right: 1.5rem;
-    left: auto;
-    width: auto;
-    padding: 0;
-    border-bottom: none;
-    z-index: 2001;
-  }
-
-  /* Hide duplicate brand logo inside mobile menu */
-  .mobile-nav-header .brand-logo {
-    display: none;
-  }
-  
-  .mobile-close-btn {
-    width: 48px;
-    height: 48px;
-    border-radius: 50%;
-    background: rgba(255, 255, 255, 0.08);
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    color: #fff;
-    font-size: 2rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    line-height: 1;
-  }
-
-  .mobile-close-btn:hover {
-    background: rgba(212, 175, 55, 0.25);
-    border-color: var(--gold-400);
-    transform: rotate(90deg);
-  }
-
   .main-nav .nav-links {
-    display: inline-flex; /* Shrink to fit content */
+    display: flex; 
     flex-direction: column;
-    align-items: flex-start; /* Left align items inside the centered block */
-    gap: 1.5rem;
+    align-items: center; 
+    justify-content: center;
+    gap: 2.2rem; /* Extremely spacious */
     list-style: none;
     padding: 0;
-    margin-bottom: 2.5rem;
+    margin: 0;
+    width: 100%;
   }
 
   .main-nav .nav-link {
-    display: flex;
-    align-items: center;
-    gap: 1.2rem;
-    font-size: 1.5rem;
-    font-weight: 600;
-    color: var(--text-main);
+    display: block;
+    font-size: 1.85rem; /* Very large, legible text */
+    font-weight: 700;
+    color: var(--text-muted); /* Start muted */
     text-decoration: none;
-    transition: all 0.3s ease;
+    transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
     opacity: 0;
-    transform: translateY(20px);
-    width: auto;
-    border: none;
-    background: transparent;
-    padding: 0.5rem;
+    transform: translateY(30px);
+    text-align: center;
+    padding: 0.5rem 1.5rem;
+    position: relative;
+    letter-spacing: -0.5px;
+  }
+
+  /* Ensure no inherited pseudo elements */
+  .main-nav .nav-link::after {
+    display: none;
   }
 
   .main-nav.open .nav-link {
     opacity: 1;
     transform: translateY(0);
+    color: var(--text-main); /* Pop to white */
   }
 
-  /* Staggered animation for links */
+  /* Smooth Staggered entry */
   .main-nav.open .nav-links li:nth-child(1) .nav-link { transition-delay: 0.1s; }
   .main-nav.open .nav-links li:nth-child(2) .nav-link { transition-delay: 0.15s; }
   .main-nav.open .nav-links li:nth-child(3) .nav-link { transition-delay: 0.2s; }
@@ -2069,51 +2033,10 @@ body.menu-open {
   .main-nav.open .nav-links li:nth-child(6) .nav-link { transition-delay: 0.35s; }
   .main-nav.open .nav-links li:nth-child(7) .nav-link { transition-delay: 0.4s; }
 
-  .main-nav .nav-link::after {
-    display: none;
-  }
-
-  .nav-icon {
-    font-size: 1.6rem;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 32px;
-  }
-
   .main-nav .nav-link:hover,
   .main-nav .nav-link:active {
     color: var(--gold-400);
-    transform: scale(1.05) translateX(5px);
-    background: transparent;
-    border: none;
-    box-shadow: none;
-  }
-
-  .mobile-nav-actions {
-    display: flex;
-    flex-direction: column;
-    gap: 1.25rem;
-    width: 100%;
-    max-width: 280px;
-    opacity: 0;
-    transform: translateY(20px);
-    transition: all 0.4s ease 0.5s;
-    border-top: none;
-    padding-top: 0;
-  }
-
-  .main-nav.open .mobile-nav-actions {
-    opacity: 1;
-    transform: translateY(0);
-  }
-
-  .mobile-action-btn {
-    width: 100%;
-    justify-content: center;
-    padding: 1rem;
-    font-size: 1.05rem;
-    border-radius: 12px;
+    transform: scale(1.1);
   }
 
   .hero-title {
