@@ -13,5 +13,8 @@
     "kible-pusulasi"
   ],
   "author": "Mustafa Keskin (keskindev.com)",
-  "license": "MIT"
+  "license": "MIT",
+  "devDependencies": {
+    "qrcode": "^1.5.4"
+  }
 }
