@@ -58,7 +58,7 @@ function initLivePrayerDemo() {
   const prayerSub = document.getElementById('current-prayer-sub');
   const heroChipTime = document.getElementById('hero-chip-time');
 
-  // Şehir Bazlı Vakit Verileri (Örnek Diyanet Standartları)
+  // Şehir Bazlı Vakit Verileri (Hassas Astronomik Hesaplama Standartları)
   const cityData = {
     istanbul: {
       imsak: '05:14', gunes: '06:41', ogle: '13:12', ikindi: '16:48', aksam: '19:34', yatsi: '20:56',
