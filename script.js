@@ -20,32 +20,61 @@ function initNavbar() {
   const header = document.getElementById('header');
   const hamburgerBtn = document.getElementById('hamburger-btn');
   const mainNav = document.getElementById('main-nav');
-  const navLinks = document.querySelectorAll('.nav-link');
+  const closeBtn = document.getElementById('mobile-close-btn');
+  const backdrop = document.getElementById('mobile-nav-backdrop');
+  const navLinks = document.querySelectorAll('.nav-link, .mobile-action-btn');
 
   // Sayfa kaydırma efekti
   window.addEventListener('scroll', () => {
-    if (window.scrollY > 40) {
+    if (window.scrollY > 30) {
       header.classList.add('scrolled');
     } else {
       header.classList.remove('scrolled');
     }
   }, { passive: true });
 
-  // Mobil Hamburger Menü
-  if (hamburgerBtn && mainNav) {
-    hamburgerBtn.addEventListener('click', () => {
-      mainNav.classList.toggle('open');
-      const isOpen = mainNav.classList.contains('open');
-      hamburgerBtn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
-    });
-
-    // Menü bağlantısına tıklandığında menüyü kapat
-    navLinks.forEach(link => {
-      link.addEventListener('click', () => {
-        mainNav.classList.remove('open');
-      });
-    });
+  function openMobileMenu() {
+    mainNav?.classList.add('open');
+    backdrop?.classList.add('open');
+    hamburgerBtn?.classList.add('active');
+    hamburgerBtn?.setAttribute('aria-expanded', 'true');
+    document.body.classList.add('menu-open');
   }
+
+  function closeMobileMenu() {
+    mainNav?.classList.remove('open');
+    backdrop?.classList.remove('open');
+    hamburgerBtn?.classList.remove('active');
+    hamburgerBtn?.setAttribute('aria-expanded', 'false');
+    document.body.classList.remove('menu-open');
+  }
+
+  // Hamburger Toggle
+  hamburgerBtn?.addEventListener('click', () => {
+    if (mainNav?.classList.contains('open')) {
+      closeMobileMenu();
+    } else {
+      openMobileMenu();
+    }
+  });
+
+  // Kapatma butonu ve backdrop tıklaması
+  closeBtn?.addEventListener('click', closeMobileMenu);
+  backdrop?.addEventListener('click', closeMobileMenu);
+
+  // Link tıklandığında menüyü kapat
+  navLinks.forEach(link => {
+    link.addEventListener('click', () => {
+      closeMobileMenu();
+    });
+  });
+
+  // ESC tuşu ile kapatma
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && mainNav?.classList.contains('open')) {
+      closeMobileMenu();
+    }
+  });
 }
 
 /* ==========================================================================
