@@ -60,16 +60,85 @@
         </div>
       </a>
 
-      <nav class="main-nav" id="main-nav">
+      <!-- Desktop & Mobile Navigation Drawer -->
+      <nav class="main-nav" id="main-nav" aria-label="Ana Menü">
+        <div class="mobile-nav-header">
+          <div class="brand-logo">
+            <img src="images/logo.png" alt="Mümin Pusulası" class="logo-img" />
+            <div class="brand-text">
+              <span class="brand-name">Mümin Pusulası</span>
+              <span class="brand-sub">İslami Yaşam Rehberi</span>
+            </div>
+          </div>
+          <button class="mobile-close-btn" id="mobile-close-btn" aria-label="Menüyü Kapat">&times;</button>
+        </div>
+
         <ul class="nav-links">
-          <li><a href="#features" class="nav-link">Özellikler</a></li>
-          <li><a href="#live-demo" class="nav-link">Canlı Vakitler</a></li>
-          <li><a href="#qibla-showcase" class="nav-link">Kıble Pusulası</a></li>
-          <li><a href="#screenshots" class="nav-link">Ekranlar</a></li>
-          <li><a href="#comparison" class="nav-link">Neden Biz?</a></li>
-          <li><a href="#faq" class="nav-link">SSS</a></li>
+          <li>
+            <a href="#features" class="nav-link">
+              <span class="nav-icon">✨</span>
+              <span>Özellikler</span>
+            </a>
+          </li>
+          <li>
+            <a href="#live-demo" class="nav-link">
+              <span class="nav-icon">🕌</span>
+              <span>Canlı Vakitler</span>
+            </a>
+          </li>
+          <li>
+            <a href="#qibla-showcase" class="nav-link">
+              <span class="nav-icon">🧭</span>
+              <span>Kıble Pusulası</span>
+            </a>
+          </li>
+          <li>
+            <a href="#screenshots" class="nav-link">
+              <span class="nav-icon">📱</span>
+              <span>Ekran Görüntüleri</span>
+            </a>
+          </li>
+          <li>
+            <a href="#comparison" class="nav-link">
+              <span class="nav-icon">🛡️</span>
+              <span>Neden Biz?</span>
+            </a>
+          </li>
+          <li>
+            <a href="#faq" class="nav-link">
+              <span class="nav-icon">❓</span>
+              <span>Sıkça Sorulanlar</span>
+            </a>
+          </li>
+          <li>
+            <a href="privacy.html" class="nav-link">
+              <span class="nav-icon">📜</span>
+              <span>Gizlilik & Güvenlik</span>
+            </a>
+          </li>
         </ul>
+
+        <!-- Mobile Drawer Action Buttons -->
+        <div class="mobile-nav-actions">
+          <a href="https://play.google.com/store/apps/details?id=com.muminpusulasi.app" target="_blank" rel="noopener noreferrer" class="btn btn-primary btn-glow mobile-action-btn">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+              <path d="M3.609 1.814L13.792 12 3.61 22.186a2.38 2.38 0 0 1-.61-.924V2.738a2.38 2.38 0 0 1 .61-.924zM15.207 13.414l2.793 2.793-12.82 7.398 10.027-10.191zm0-2.828L5.18 0.395 18 7.793l-2.793 2.793zM16.621 12l4.896-2.826a1.414 1.414 0 0 1 0 2.452L16.621 12z"/>
+            </svg>
+            <span>Google Play'den İndir</span>
+          </a>
+          <a href="MuminPusulasi.apk" download="MuminPusulasi.apk" class="btn btn-outline mobile-action-btn">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="7 10 12 15 17 10"></polyline>
+              <line x1="12" y1="15" x2="12" y2="3"></line>
+            </svg>
+            <span>Doğrudan APK İndir (12 MB)</span>
+          </a>
+        </div>
       </nav>
+
+      <!-- Backdrop Overlay for Mobile Drawer -->
+      <div class="mobile-nav-backdrop" id="mobile-nav-backdrop" aria-hidden="true"></div>
 
       <div class="header-actions">
         <a href="https://play.google.com/store/apps/details?id=com.muminpusulasi.app" target="_blank" rel="noopener noreferrer" class="btn btn-primary btn-glow nav-btn" id="nav-download-btn">
@@ -79,11 +148,11 @@
           <span>İndir</span>
         </a>
 
-        <!-- Hamburger Button for Mobile -->
-        <button class="hamburger-btn" id="hamburger-btn" aria-label="Menüyü Aç/Kapat">
-          <span></span>
-          <span></span>
-          <span></span>
+        <!-- Animated Hamburger Button -->
+        <button class="hamburger-btn" id="hamburger-btn" aria-label="Menüyü Aç/Kapat" aria-expanded="false">
+          <span class="hamburger-line line-1"></span>
+          <span class="hamburger-line line-2"></span>
+          <span class="hamburger-line line-3"></span>
         </button>
       </div>
     </div>
