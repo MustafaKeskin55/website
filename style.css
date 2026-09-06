@@ -1948,6 +1948,11 @@ body.menu-open {
   overflow: hidden;
 }
 
+body.menu-open .site-header {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
 @media (max-width: 992px) {
   .hamburger-btn {
     display: flex;
