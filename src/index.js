@@ -1,5 +1,5 @@
 // Cloudflare Worker entry point for website & Mümin Pusulası API
-// Live Remote Config & Assets handler with strict security
+// Live Remote Config & Assets handler with strict security & Edge Cache persistence
 
 let memoryConfig = null;
 
@@ -55,7 +55,7 @@ function isRequestAuthorized(request) {
 }
 
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     const url = new URL(request.url);
 
     // ── API: /api/config ───────────────────────────────────────────────────────
@@ -71,6 +71,11 @@ export default {
         return new Response(null, { headers });
       }
 
+      const cache = typeof caches !== 'undefined' ? caches.default : null;
+      const cacheUrl = new URL(request.url);
+      cacheUrl.pathname = '/api/config';
+      cacheUrl.search = '';
+
       try {
         // 1. GET Request: Android App & Admin Panel read live configuration
         if (request.method === 'GET') {
@@ -81,6 +86,14 @@ export default {
               const saved = await env.CONFIG.get('app_settings');
               if (saved) {
                 config = { ...config, ...JSON.parse(saved) };
+              }
+            } catch (_) {}
+          } else if (cache) {
+            try {
+              const cached = await cache.match(cacheUrl.toString());
+              if (cached) {
+                const cachedData = await cached.json();
+                config = { ...config, ...cachedData };
               }
             } catch (_) {}
           }
@@ -110,6 +123,14 @@ export default {
                 current = { ...current, ...JSON.parse(saved) };
               }
             } catch (_) {}
+          } else if (cache) {
+            try {
+              const cached = await cache.match(cacheUrl.toString());
+              if (cached) {
+                const cachedData = await cached.json();
+                current = { ...current, ...cachedData };
+              }
+            } catch (_) {}
           }
 
           const newConfig = {
@@ -129,6 +150,22 @@ export default {
           if (env && env.CONFIG) {
             try {
               await env.CONFIG.put('app_settings', JSON.stringify(newConfig));
+            } catch (_) {}
+          }
+
+          if (cache) {
+            try {
+              const cacheRes = new Response(JSON.stringify(newConfig), {
+                headers: {
+                  'Content-Type': 'application/json; charset=utf-8',
+                  'Cache-Control': 'public, max-age=31536000, s-maxage=31536000'
+                }
+              });
+              if (ctx && ctx.waitUntil) {
+                ctx.waitUntil(cache.put(cacheUrl.toString(), cacheRes));
+              } else {
+                await cache.put(cacheUrl.toString(), cacheRes);
+              }
             } catch (_) {}
           }
 

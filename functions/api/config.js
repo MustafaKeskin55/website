@@ -1,5 +1,5 @@
 // Cloudflare Pages Function: /api/config
-// Dynamic App Configuration & Admin Sync with Robust Security
+// Dynamic App Configuration & Admin Sync with Robust Security & Edge Cache Persistence
 
 let memoryConfig = null;
 
@@ -41,7 +41,6 @@ function isRequestAuthorized(request) {
     try {
       const parts = candidateToken.split('.');
       if (parts.length >= 2) {
-        // Base64URL decode
         const b64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
         const jsonStr = atob(b64);
         const payload = JSON.parse(jsonStr);
@@ -69,11 +68,17 @@ export async function onRequest(context) {
     return new Response(null, { headers });
   }
 
+  const cache = typeof caches !== 'undefined' ? caches.default : null;
+  const cacheUrl = new URL(request.url);
+  cacheUrl.pathname = '/api/config';
+  cacheUrl.search = '';
+
   try {
     // 1. GET Request: App & Admin read configuration
     if (request.method === 'GET') {
       let config = { ...DEFAULT_CONFIG, ...(memoryConfig || {}) };
 
+      // A. Cloudflare KV Kontrolü
       if (env && env.CONFIG) {
         try {
           const saved = await env.CONFIG.get('app_settings');
@@ -81,12 +86,21 @@ export async function onRequest(context) {
             config = { ...config, ...JSON.parse(saved) };
           }
         } catch (_) {}
+      } else if (cache) {
+        // B. Cloudflare Edge Cache Kontrolü
+        try {
+          const cached = await cache.match(cacheUrl.toString());
+          if (cached) {
+            const cachedData = await cached.json();
+            config = { ...config, ...cachedData };
+          }
+        } catch (_) {}
       }
 
       return new Response(JSON.stringify(config), { headers });
     }
 
-    // 2. POST Request: Admin writes configuration (Strict Security)
+    // 2. POST Request: Admin writes configuration
     if (request.method === 'POST') {
       if (!isRequestAuthorized(request)) {
         return new Response(
@@ -108,6 +122,14 @@ export async function onRequest(context) {
             current = { ...current, ...JSON.parse(saved) };
           }
         } catch (_) {}
+      } else if (cache) {
+        try {
+          const cached = await cache.match(cacheUrl.toString());
+          if (cached) {
+            const cachedData = await cached.json();
+            current = { ...current, ...cachedData };
+          }
+        } catch (_) {}
       }
 
       const newConfig = {
@@ -124,9 +146,27 @@ export async function onRequest(context) {
 
       memoryConfig = newConfig;
 
+      // KV'ye kalıcı yaz
       if (env && env.CONFIG) {
         try {
           await env.CONFIG.put('app_settings', JSON.stringify(newConfig));
+        } catch (_) {}
+      }
+
+      // Edge Cache'e yaz (Isolate'ler arası kalıcılık)
+      if (cache) {
+        try {
+          const cacheRes = new Response(JSON.stringify(newConfig), {
+            headers: {
+              'Content-Type': 'application/json; charset=utf-8',
+              'Cache-Control': 'public, max-age=31536000, s-maxage=31536000'
+            }
+          });
+          if (context.waitUntil) {
+            context.waitUntil(cache.put(cacheUrl.toString(), cacheRes));
+          } else {
+            await cache.put(cacheUrl.toString(), cacheRes);
+          }
         } catch (_) {}
       }
 
