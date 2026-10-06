@@ -161,20 +161,20 @@ export const WallpapersTab: React.FC<WallpapersTabProps> = ({ wallpapers, onDele
           </form>
         </div>
 
-        {/* Duvar Kağıdı Rehberi */}
+        {/* Duvar Kağıdı Yönetim Kuralları */}
         <div className="control-panel">
           <div className="panel-title">
-            <span><Sparkles size={20} /> Özellikler & Yönetim</span>
+            <span><Sparkles size={20} /> İşlem Kuralları</span>
           </div>
           <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', lineHeight: '1.6' }}>
             <p style={{ marginBottom: '12px' }}>
-              📱 <b>Mobil Uyumluluk:</b> Yüklenen görseller kullanıcının telefon ekranına göre akıllı crop ve ölçeklendirme ile yerleşir.
+              🗑️ <b>Silme İşlemi:</b> Herhangi bir duvar kağıdı için <b>"Sil"</b> butonuna tıklandığında kimlik sunucuya iletilir ve mobil uygulamada anında gizlenir.
             </p>
             <p style={{ marginBottom: '12px' }}>
-              🗑️ <b>Tek Tıkla Silme:</b> Aşağıdaki listeden <b>"Sil"</b> butonuna basılan görseller anında uygulamadan kaldırılır.
+              📤 <b>Yükleme İşlemi:</b> Dosya seçerek veya doğrudan HTTPS görsel adresi vererek eklenen yeni görseller doğrudan kullanıcıların telefonundaki seçiciye eklenir.
             </p>
             <p>
-              📜 <b>Ayet & Hadis Katmanı:</b> Kullanıcı telefonda duvar kağıdını seçtiğinde üzerine isteğe göre günün ayeti veya hadisi otomatik yazılır.
+              📐 <b>Çözünürlük:</b> Mobil ekranlar için dikey oranlı (9:16) fotoğraflar önerilir.
             </p>
           </div>
         </div>

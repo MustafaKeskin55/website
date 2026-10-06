@@ -206,16 +206,19 @@ export const ApisTab: React.FC<ApisTabProps> = ({ config, onUpdate, onSave, isSa
           style={{
             marginTop: '24px',
             padding: '16px',
-            background: 'rgba(212,175,55,0.06)',
+            background: 'rgba(0,0,0,0.3)',
             borderRadius: '14px',
-            border: '1px solid rgba(212,175,55,0.2)'
+            border: '1px solid rgba(255,255,255,0.08)'
           }}
         >
-          <h4 style={{ fontSize: '0.92rem', color: 'var(--gold)', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <ShieldCheck size={18} /> Sıfır Kesinti & Güvenli Doğrulama
+          <h4 style={{ fontSize: '0.92rem', color: '#fff', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Server size={18} color="#10B981" /> Canlı Senkronizasyon Akışı
           </h4>
-          <p style={{ fontSize: '0.82rem', color: 'rgba(255,255,255,0.78)', lineHeight: '1.6' }}>
-            Yaptığınız tüm değişiklikler hem tarayıcı önbelleğine hem de Cloudflare KV bulutuna güvenli anahtarla kaydedilir. Mobil APK buradaki verileri anlık olarak çeker.
+          <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', lineHeight: '1.6', marginBottom: '8px' }}>
+            Kaydedilen tüm API adresleri ve ayarlar Cloudflare KV bulutunda depolanır.
+          </p>
+          <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', lineHeight: '1.6' }}>
+            Mobil APK açılışta <code>https://muminpusulasi.keskindev.com/api/config</code> adresini sorgular ve yeni ayarları anında yerel hafızasına yazar.
           </p>
         </div>
       </div>

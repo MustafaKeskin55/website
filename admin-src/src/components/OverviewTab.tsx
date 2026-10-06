@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Image, Megaphone, Activity, Users, ArrowUpRight, Zap, RefreshCw, ShieldCheck, CheckCircle2, AlertTriangle } from 'lucide-react';
+import { Image, Megaphone, Activity, Users, Zap, RefreshCw, Server, CheckCircle2, XCircle, Clock } from 'lucide-react';
 import { AppConfig, TabKey, Wallpaper } from '../types';
 
 interface OverviewTabProps {
@@ -8,80 +8,163 @@ interface OverviewTabProps {
   onNavigate: (tab: TabKey) => void;
 }
 
+interface ServiceCheck {
+  name: string;
+  url: string;
+  status: 'checking' | 'ok' | 'error';
+  statusCode?: number;
+  duration?: number;
+  error?: string;
+  detail?: string;
+}
+
 export const OverviewTab: React.FC<OverviewTabProps> = ({ config, wallpapers, onNavigate }) => {
-  const [healthScore, setHealthScore] = useState<number>(100);
-  const [healthText, setHealthText] = useState<string>('Kontrol ediliyor...');
-  const [pingMs, setPingMs] = useState<number | null>(null);
   const [isChecking, setIsChecking] = useState<boolean>(false);
   const [lastCheckTime, setLastCheckTime] = useState<string>(() => new Date().toLocaleTimeString('tr-TR'));
+  const [services, setServices] = useState<ServiceCheck[]>([
+    { name: "Namaz Vakitleri API", url: config.prayerApiUrl || 'https://api.aladhan.com/', status: 'checking' },
+    { name: "Kur'an-ı Kerim API", url: config.quranApiUrl || 'https://api.quran.com/api/v4/', status: 'checking' },
+    { name: "Merkezi Bulut API", url: config.serverApiUrl || '/api/config', status: 'checking' }
+  ]);
 
-  // Canlı API Servis Sağlık Taraması
-  const runLiveHealthCheck = async () => {
+  const runDiagnostics = async () => {
     setIsChecking(true);
-    const start = Date.now();
-    let passed = 0;
-    const total = 3;
+    const updatedServices: ServiceCheck[] = [];
 
+    // 1. Namaz Vakitleri API Kontrolü
+    const prayerBase = (config.prayerApiUrl || 'https://api.aladhan.com/').replace(/\/$/, '');
+    const pStart = Date.now();
     try {
-      // 1. Namaz API
-      const prayerBase = (config.prayerApiUrl || 'https://api.aladhan.com/').replace(/\/$/, '');
-      const pRes = await fetch(`${prayerBase}/v1/timingsByCity?city=Istanbul&country=Turkey&method=13`, { mode: 'cors' }).catch(() => null);
-      if (pRes && pRes.ok) passed++;
-
-      // 2. Kur'an API
-      const quranBase = (config.quranApiUrl || 'https://api.quran.com/api/v4/').replace(/\/$/, '');
-      const qRes = await fetch(`${quranBase}/chapters`, { mode: 'cors' }).catch(() => null);
-      if (qRes && qRes.ok) passed++;
-
-      // 3. Merkezi Sunucu
-      const targetApi = (config.serverApiUrl || '').trim() || '/api/config';
-      const sRes = await fetch(targetApi).catch(() => null);
-      if (sRes && (sRes.ok || sRes.status === 200)) passed++;
-
-      const duration = Date.now() - start;
-      setPingMs(duration);
-
-      const score = Math.round((passed / total) * 100);
-      setHealthScore(score);
-
-      if (score === 100) {
-        setHealthText(`Tüm Servisler Aktif (${duration}ms)`);
-      } else if (score >= 60) {
-        setHealthText(`${passed}/${total} Servis Aktif (${duration}ms)`);
+      const pRes = await fetch(`${prayerBase}/v1/timingsByCity?city=Istanbul&country=Turkey&method=13`);
+      const pDur = Date.now() - pStart;
+      if (pRes.ok) {
+        const pData = await pRes.json();
+        updatedServices.push({
+          name: "Namaz Vakitleri API",
+          url: prayerBase,
+          status: 'ok',
+          statusCode: pRes.status,
+          duration: pDur,
+          detail: `200 OK (${pData?.data?.date?.readable || 'Vakitler Alındı'})`
+        });
       } else {
-        setHealthText(`Kısmi Bağlantı Sorunu (${duration}ms)`);
+        updatedServices.push({
+          name: "Namaz Vakitleri API",
+          url: prayerBase,
+          status: 'error',
+          statusCode: pRes.status,
+          duration: pDur,
+          error: `HTTP ${pRes.status} ${pRes.statusText}`
+        });
       }
-    } catch (_) {
-      setHealthScore(66);
-      setHealthText('Servisler Yanıt Veriyor');
+    } catch (e: any) {
+      updatedServices.push({
+        name: "Namaz Vakitleri API",
+        url: prayerBase,
+        status: 'error',
+        duration: Date.now() - pStart,
+        error: e.message || 'Ağ Hatası'
+      });
     }
 
+    // 2. Kur'an-ı Kerim API Kontrolü
+    const quranBase = (config.quranApiUrl || 'https://api.quran.com/api/v4/').replace(/\/$/, '');
+    const qStart = Date.now();
+    try {
+      const qRes = await fetch(`${quranBase}/chapters`);
+      const qDur = Date.now() - qStart;
+      if (qRes.ok) {
+        const qData = await qRes.json();
+        updatedServices.push({
+          name: "Kur'an-ı Kerim API",
+          url: quranBase,
+          status: 'ok',
+          statusCode: qRes.status,
+          duration: qDur,
+          detail: `200 OK (${qData?.chapters?.length || 114} Sure Mevcut)`
+        });
+      } else {
+        updatedServices.push({
+          name: "Kur'an-ı Kerim API",
+          url: quranBase,
+          status: 'error',
+          statusCode: qRes.status,
+          duration: qDur,
+          error: `HTTP ${qRes.status} ${qRes.statusText}`
+        });
+      }
+    } catch (e: any) {
+      updatedServices.push({
+        name: "Kur'an-ı Kerim API",
+        url: quranBase,
+        status: 'error',
+        duration: Date.now() - qStart,
+        error: e.message || 'Ağ Hatası'
+      });
+    }
+
+    // 3. Merkezi Sunucu / API Kontrolü
+    const serverUrl = (config.serverApiUrl || '').trim() || '/api/config';
+    const sStart = Date.now();
+    try {
+      const sRes = await fetch(serverUrl);
+      const sDur = Date.now() - sStart;
+      if (sRes.ok) {
+        const sData = await sRes.json();
+        updatedServices.push({
+          name: "Merkezi Yapılandırma API",
+          url: serverUrl,
+          status: 'ok',
+          statusCode: sRes.status,
+          duration: sDur,
+          detail: `200 OK (Aktif Reklam ID: ${sData.bannerAdUnitId ? 'Tanımlı' : 'Boş'})`
+        });
+      } else {
+        updatedServices.push({
+          name: "Merkezi Yapılandırma API",
+          url: serverUrl,
+          status: 'error',
+          statusCode: sRes.status,
+          duration: sDur,
+          error: `HTTP ${sRes.status} ${sRes.statusText}`
+        });
+      }
+    } catch (e: any) {
+      updatedServices.push({
+        name: "Merkezi Yapılandırma API",
+        url: serverUrl,
+        status: 'error',
+        duration: Date.now() - sStart,
+        error: e.message || 'Bağlantı Hatası'
+      });
+    }
+
+    setServices(updatedServices);
     setLastCheckTime(new Date().toLocaleTimeString('tr-TR'));
     setIsChecking(false);
   };
 
   useEffect(() => {
-    runLiveHealthCheck();
+    runDiagnostics();
   }, [config.prayerApiUrl, config.quranApiUrl, config.serverApiUrl]);
 
-  const shortBannerId = config.bannerAdUnitId
-    ? config.bannerAdUnitId.length > 25
-      ? `${config.bannerAdUnitId.slice(0, 16)}...${config.bannerAdUnitId.slice(-6)}`
-      : config.bannerAdUnitId
-    : 'Tanımlanmadı';
+  const okCount = services.filter((s) => s.status === 'ok').length;
+  const avgPing = Math.round(
+    services.reduce((acc, s) => acc + (s.duration || 0), 0) / (services.length || 1)
+  );
 
   return (
     <div>
-      {/* İstatistik Kartları (Canlı & Dinamik) */}
+      {/* Canlı İstatistikler */}
       <div className="stats-grid">
         <div className="stat-card" onClick={() => onNavigate('wallpapers')} style={{ cursor: 'pointer' }}>
           <div className="stat-title">
-            <span>Aktif Duvar Kağıdı</span>
+            <span>Yayındaki Duvar Kağıtları</span>
             <Image size={18} color="#D4AF37" />
           </div>
           <div className="stat-value">{wallpapers.length}</div>
           <div className="stat-subtitle">
-            {wallpapers.filter(w => w.isCustom).length} Özel Yüklenen • {wallpapers.filter(w => !w.isCustom).length} Sistem Görseli
+            {wallpapers.filter(w => w.isCustom).length} Özel Yükleme • {wallpapers.filter(w => !w.isCustom).length} Sistem Görseli
           </div>
         </div>
 
@@ -94,85 +177,115 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({ config, wallpapers, on
             {config.adsEnabled ? 'Aktif' : 'Kapalı'}
           </div>
           <div className="stat-subtitle" style={{ fontFamily: 'monospace' }}>
-            {config.adsEnabled ? shortBannerId : 'Reklamlar Uygulamada Gizlendi'}
+            {config.bannerAdUnitId ? `${config.bannerAdUnitId.slice(0, 16)}...` : 'Tanımsız'}
           </div>
         </div>
 
         <div className="stat-card" onClick={() => onNavigate('apis')} style={{ cursor: 'pointer' }}>
           <div className="stat-title">
-            <span>API Servis Sağlığı</span>
-            <Activity size={18} color={healthScore >= 80 ? '#10B981' : '#F59E0B'} />
+            <span>Servis Sağlık Durumu</span>
+            <Activity size={18} color={okCount === services.length ? '#10B981' : '#F59E0B'} />
           </div>
-          <div className="stat-value" style={{ color: healthScore >= 80 ? '#10B981' : '#F59E0B', fontSize: '1.8rem' }}>
-            %{healthScore}
+          <div className="stat-value" style={{ color: okCount === services.length ? '#10B981' : '#F59E0B', fontSize: '1.8rem' }}>
+            {okCount} / {services.length}
           </div>
-          <div className="stat-subtitle">{healthText}</div>
+          <div className="stat-subtitle">
+            {okCount === services.length ? 'Tüm Servisler Yanıt Veriyor' : 'Bazı Servislerde Hata Var'}
+          </div>
         </div>
 
         <div className="stat-card">
           <div className="stat-title">
-            <span>Canlı Senkronizasyon</span>
-            <Users size={18} color="#10B981" />
+            <span>Ortalama Ağ Gecikmesi</span>
+            <Clock size={18} color="#10B981" />
           </div>
           <div className="stat-value" style={{ fontSize: '1.8rem', color: '#10B981' }}>
-            {pingMs !== null ? `${pingMs}ms` : 'Bağlı'}
+            {avgPing > 0 ? `${avgPing} ms` : '-'}
           </div>
-          <div className="stat-subtitle">Son Kontrol: {lastCheckTime}</div>
+          <div className="stat-subtitle">Son Test: {lastCheckTime}</div>
         </div>
       </div>
 
-      {/* Yenileme & Hızlı İşlemler */}
+      {/* Yenile Butonu */}
       <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '14px' }}>
         <button
           className="btn-outline"
-          onClick={runLiveHealthCheck}
+          onClick={runDiagnostics}
           disabled={isChecking}
           style={{ fontSize: '0.8rem', padding: '6px 14px' }}
         >
           <RefreshCw size={14} className={isChecking ? 'animate-spin' : ''} />
-          <span>{isChecking ? 'Taranıyor...' : 'Canlı Servisleri Yeniden Tara'}</span>
+          <span>{isChecking ? 'Taranıyor...' : 'Bağlantıları Yeniden Test Et'}</span>
         </button>
       </div>
 
-      <div className="controls-grid">
-        <div className="control-panel">
-          <div className="panel-title">
-            <span><Zap size={20} /> Hızlı Yönetim İşlemleri</span>
-          </div>
-          <p style={{ fontSize: '0.88rem', color: 'var(--text-muted)', marginBottom: '1.5rem', lineHeight: '1.5' }}>
-            Mobil uygulamanız bu panel üzerinden gerçek zamanlı senkronize olur. Yaptığınız her değişiklik anında telefonlara yansır.
-          </p>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            <button className="btn" onClick={() => onNavigate('wallpapers')}>
-              <Image size={18} /> Duvar Kağıtlarını Yönet / Sil / Yenisini Yükle
-            </button>
-            <button className="btn-outline" onClick={() => onNavigate('apis')}>
-              <Activity size={18} /> Namaz & Kur'an API URL Ayarlarını Değiştir
-            </button>
-            <button className="btn-outline" onClick={() => onNavigate('ads')}>
-              <Megaphone size={18} /> AdMob Banner Birim Kimliğini Düzenle
-            </button>
-          </div>
+      {/* Gerçek Canlı Servis Durumu Tablosu */}
+      <div className="control-panel" style={{ marginBottom: '20px' }}>
+        <div className="panel-title">
+          <span><Server size={20} /> Gerçek Zamanlı Servis Bağlantı Durumu</span>
         </div>
 
-        <div className="control-panel">
-          <div className="panel-title">
-            <span><ShieldCheck size={20} /> Güvenlik & Gerçek Zamanlı Bağlantı</span>
-          </div>
-          <div style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.82)', lineHeight: '1.7' }}>
-            <p style={{ marginBottom: '10px' }}>
-              🔒 <b>Master Key Güvenliği:</b> Panel ve API uç noktaları yetkisiz erişimlere karşı çift katmanlı güvenlik anahtarıyla korunur.
-            </p>
-            <p style={{ marginBottom: '10px' }}>
-              ✓ <b>Anlık Yayından Kaldırma:</b> Panelden sildiğiniz herhangi bir duvar kağıdı kullanıcıların uygulamasından hemen kaldırılır.
-            </p>
-            <p style={{ marginBottom: '10px' }}>
-              ✓ <b>Yeni Görsel Ekleme:</b> Yüklediğiniz dikey fotoğraflar anında tüm kullanıcıların telefonunda en üstte yayınlanır.
-            </p>
-            <p>
-              ✓ <b>Dinamik API Servisleri:</b> API çökmelerine karşı adresleri panelden güncelleyerek uygulamayı yeniden yayınlamaya gerek kalmadan değiştirebilirsiniz.
-            </p>
-          </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          {services.map((srv, idx) => (
+            <div
+              key={idx}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '12px 16px',
+                background: 'rgba(0,0,0,0.3)',
+                borderRadius: '12px',
+                border: '1px solid rgba(255,255,255,0.06)'
+              }}
+            >
+              <div>
+                <div style={{ fontWeight: 600, fontSize: '0.92rem', color: '#fff', marginBottom: '2px' }}>
+                  {srv.name}
+                </div>
+                <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontFamily: 'monospace' }}>
+                  {srv.url}
+                </div>
+              </div>
+
+              <div style={{ textAlign: 'right' }}>
+                {srv.status === 'checking' && (
+                  <span style={{ fontSize: '0.82rem', color: '#F59E0B' }}>Test Ediliyor...</span>
+                )}
+                {srv.status === 'ok' && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#10B981' }}>
+                    <CheckCircle2 size={16} />
+                    <span style={{ fontSize: '0.82rem', fontWeight: 600 }}>{srv.duration} ms</span>
+                    <span style={{ fontSize: '0.75rem', opacity: 0.8 }}>({srv.detail})</span>
+                  </div>
+                )}
+                {srv.status === 'error' && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#EF4444' }}>
+                    <XCircle size={16} />
+                    <span style={{ fontSize: '0.82rem', fontWeight: 600 }}>{srv.error}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Hızlı İşlemler */}
+      <div className="control-panel">
+        <div className="panel-title">
+          <span><Zap size={20} /> Yönetim Menüsü</span>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px' }}>
+          <button className="btn" onClick={() => onNavigate('wallpapers')}>
+            <Image size={18} /> Duvar Kağıtlarını Düzenle
+          </button>
+          <button className="btn-outline" onClick={() => onNavigate('apis')}>
+            <Activity size={18} /> API Bağlantılarını Düzenle
+          </button>
+          <button className="btn-outline" onClick={() => onNavigate('ads')}>
+            <Megaphone size={18} /> AdMob Reklam Birimini Değiştir
+          </button>
         </div>
       </div>
     </div>
