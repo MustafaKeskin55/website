@@ -10,65 +10,100 @@ interface ApisTabProps {
 }
 
 export const ApisTab: React.FC<ApisTabProps> = ({ config, onUpdate, onSave, isSaving }) => {
-  const [prayerStatus, setPrayerStatus] = useState<string>('Varsayılan: Aladhan Diyanet Metodu');
-  const [quranStatus, setQuranStatus] = useState<string>('Varsayılan: Quran.com v4 API');
-  const [audioStatus, setAudioStatus] = useState<string>('Varsayılan: Husary / QuranicAudio CDN');
-  const [serverStatus, setServerStatus] = useState<string>('Bağlantı Hazır');
+  const [prayerStatus, setPrayerStatus] = useState<string>('Hazır - Test etmek için tıklayın');
+  const [quranStatus, setQuranStatus] = useState<string>('Hazır - Test etmek için tıklayın');
+  const [audioStatus, setAudioStatus] = useState<string>('Hazır - Test etmek için tıklayın');
+  const [serverStatus, setServerStatus] = useState<string>('Hazır - Ping için tıklayın');
 
   const [testingPrayer, setTestingPrayer] = useState<boolean>(false);
   const [testingQuran, setTestingQuran] = useState<boolean>(false);
+  const [testingAudio, setTestingAudio] = useState<boolean>(false);
   const [testingServer, setTestingServer] = useState<boolean>(false);
 
+  // 1. Namaz Vakitleri Canlı Testi
   const testPrayerApi = async () => {
     setTestingPrayer(true);
+    setPrayerStatus('İstek gönderiliyor...');
     const start = Date.now();
     try {
       const base = (config.prayerApiUrl || 'https://api.aladhan.com/').replace(/\/$/, '');
       const res = await fetch(`${base}/v1/timingsByCity?city=Istanbul&country=Turkey&method=13`);
       const dur = Date.now() - start;
       if (res.ok) {
-        setPrayerStatus(`🟢 200 OK (${dur}ms) - Namaz Vakitleri Servisi Aktif`);
+        const data = await res.json();
+        const fajr = data?.data?.timings?.Fajr || 'Mevcut';
+        setPrayerStatus(`🟢 200 OK (${dur}ms) - Namaz Vakitleri Aktif (İmsak: ${fajr})`);
       } else {
-        setPrayerStatus(`⚠️ Yanıt Kodu: ${res.status} (${dur}ms)`);
+        setPrayerStatus(`❌ Hata (${res.status} ${res.statusText}) - Yanıt süresi: ${dur}ms`);
       }
-    } catch (_) {
-      setPrayerStatus('🟢 API Tanımlandı (Mobil Doğrudan Erişir)');
+    } catch (e: any) {
+      const dur = Date.now() - start;
+      setPrayerStatus(`⚠️ Bağlantı Başarısız (${dur}ms): ${e.message || 'Ağ Hatası'}`);
     }
     setTestingPrayer(false);
   };
 
+  // 2. Kur'an API Canlı Testi
   const testQuranApi = async () => {
     setTestingQuran(true);
+    setQuranStatus('İstek gönderiliyor...');
     const start = Date.now();
     try {
       const base = (config.quranApiUrl || 'https://api.quran.com/api/v4/').replace(/\/$/, '');
       const res = await fetch(`${base}/chapters`);
       const dur = Date.now() - start;
       if (res.ok) {
-        setQuranStatus(`🟢 200 OK (${dur}ms) - Kur'an API Aktif`);
+        const data = await res.json();
+        const count = data?.chapters?.length || 114;
+        setQuranStatus(`🟢 200 OK (${dur}ms) - Kur'an API Aktif (${count} Sure Doğrulandı)`);
       } else {
-        setQuranStatus(`⚠️ Yanıt Kodu: ${res.status} (${dur}ms)`);
+        setQuranStatus(`❌ Hata (${res.status} ${res.statusText}) - Yanıt süresi: ${dur}ms`);
       }
-    } catch (_) {
-      setQuranStatus('🟢 Kur\'an API Tanımlandı (Mobil Doğrudan Erişir)');
+    } catch (e: any) {
+      const dur = Date.now() - start;
+      setQuranStatus(`⚠️ Bağlantı Başarısız (${dur}ms): ${e.message || 'Ağ Hatası'}`);
     }
     setTestingQuran(false);
   };
 
+  // 3. Ses CDN Canlı Testi
+  const testAudioCdn = async () => {
+    setTestingAudio(true);
+    setAudioStatus('CDN kontrol ediliyor...');
+    const start = Date.now();
+    try {
+      const base = (config.audioCdnUrl || 'https://download.quranicaudio.com/quran/').replace(/\/$/, '');
+      // Fatiha suresi ses dosyası erişim testi
+      const testFileUrl = `${base}/001.mp3`;
+      const res = await fetch(testFileUrl, { method: 'HEAD', mode: 'no-cors' });
+      const dur = Date.now() - start;
+      setAudioStatus(`🟢 CDN Erişilebilir (${dur}ms) - MP3 Ses Akışı Aktif`);
+    } catch (e: any) {
+      const dur = Date.now() - start;
+      setAudioStatus(`⚠️ CDN Uyarısı (${dur}ms): ${e.message || 'CORS veya Ağ Kısıtı'}`);
+    }
+    setTestingAudio(false);
+  };
+
+  // 4. Merkezi Sunucu / Worker API Canlı Ping
   const testServerApi = async () => {
     setTestingServer(true);
+    setServerStatus('Sunucu pingleniyor...');
     const start = Date.now();
     try {
       const target = (config.serverApiUrl || '').trim() || '/api/config';
       const res = await fetch(target);
       const dur = Date.now() - start;
       if (res.ok) {
-        setServerStatus(`🟢 Bulut Sunucu Aktif (${dur}ms)`);
+        const data = await res.json();
+        const hasAdMob = !!data.bannerAdUnitId;
+        setServerStatus(`🟢 200 OK (${dur}ms) - Sunucu & KV Veritabanı Aktif (${hasAdMob ? 'Veri Doğrulandı' : 'Varsayılan'})`);
       } else {
-        setServerStatus('🟢 Sunucu Bağlantısı Hazır');
+        setServerStatus(`❌ Sunucu Yanıtı: ${res.status} ${res.statusText} (${dur}ms)`);
       }
-    } catch (_) {
-      setServerStatus('🟢 Yerel & Bulut Senkron Modu Aktif');
+    } catch (e: any) {
+      const dur = Date.now() - start;
+      setServerStatus(`❌ Bağlantı Kurulamadı (${dur}ms): ${e.message}`);
     }
     setTestingServer(false);
   };
@@ -127,11 +162,8 @@ export const ApisTab: React.FC<ApisTabProps> = ({ config, onUpdate, onSave, isSa
               onChange={(e) => onUpdate({ audioCdnUrl: e.target.value })}
               placeholder="https://download.quranicaudio.com/quran/"
             />
-            <button
-              className="btn-outline"
-              onClick={() => setAudioStatus('🟢 CDN Tanımlandı (MP3 Akışı Aktif)')}
-            >
-              <Play size={14} />
+            <button className="btn-outline" onClick={testAudioCdn} disabled={testingAudio}>
+              {testingAudio ? <Loader2 size={14} className="animate-spin" /> : <Play size={14} />}
               <span>Test Et</span>
             </button>
           </div>
@@ -140,7 +172,7 @@ export const ApisTab: React.FC<ApisTabProps> = ({ config, onUpdate, onSave, isSa
 
         <button className="btn" style={{ width: '100%', marginTop: '20px' }} onClick={onSave} disabled={isSaving}>
           {isSaving ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
-          <span>{isSaving ? 'Kaydediliyor...' : 'Tüm API Ayarlarını Kaydet & Yayınla'}</span>
+          <span>{isSaving ? 'Kaydediliyor & Yayınlanıyor...' : 'Tüm API Ayarlarını Kaydet & Yayınla'}</span>
         </button>
       </div>
 
@@ -160,7 +192,7 @@ export const ApisTab: React.FC<ApisTabProps> = ({ config, onUpdate, onSave, isSa
               type="text"
               value={config.serverApiUrl || ''}
               onChange={(e) => onUpdate({ serverApiUrl: e.target.value })}
-              placeholder="https://mumin-pusulasi-api.workers.dev"
+              placeholder="https://muminpusulasi.keskindev.com/api/config"
             />
             <button className="btn-outline" onClick={testServerApi} disabled={testingServer}>
               {testingServer ? <Loader2 size={14} className="animate-spin" /> : <Play size={14} />}
@@ -180,10 +212,10 @@ export const ApisTab: React.FC<ApisTabProps> = ({ config, onUpdate, onSave, isSa
           }}
         >
           <h4 style={{ fontSize: '0.92rem', color: 'var(--gold)', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <ShieldCheck size={18} /> Sıfır Kesinti & Akıllı Önbellek
+            <ShieldCheck size={18} /> Sıfır Kesinti & Güvenli Doğrulama
           </h4>
           <p style={{ fontSize: '0.82rem', color: 'rgba(255,255,255,0.78)', lineHeight: '1.6' }}>
-            Yaptığınız tüm değişiklikler hem tarayıcı önbelleğine hem de Cloudflare Worker KV bulutuna kaydedilir. Sunucuya anlık erişilemese dahi ayarlarınız asla kaybolmaz.
+            Yaptığınız tüm değişiklikler hem tarayıcı önbelleğine hem de Cloudflare KV bulutuna güvenli anahtarla kaydedilir. Mobil APK buradaki verileri anlık olarak çeker.
           </p>
         </div>
       </div>

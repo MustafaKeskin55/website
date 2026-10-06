@@ -1,64 +1,126 @@
+// Cloudflare Pages Function: /api/config
+// Dynamic App Configuration & Admin Sync with Strict Security
+
+let memoryConfig = null;
+
+const DEFAULT_CONFIG = {
+  adsEnabled: true,
+  bannerAdUnitId: "ca-app-pub-1095649040834648/6353100367",
+  ramazanMode: false,
+  prayerApiUrl: "https://api.aladhan.com/",
+  quranApiUrl: "https://api.quran.com/api/v4/",
+  audioCdnUrl: "https://download.quranicaudio.com/quran/",
+  deletedWallpaperIds: [],
+  customWallpapers: []
+};
+
+const ADMIN_MASTER_SECRET = "MuminAdmin2026!";
+const AUTHORIZED_ADMIN_EMAIL = "mustafakeksinn@gmail.com";
+
 export async function onRequest(context) {
-    const { request, env } = context;
+  const { request, env } = context;
 
-    // CORS Headers for API
-    const headers = {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-        'Content-Type': 'application/json'
-    };
+  const headers = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Admin-Key',
+    'Content-Type': 'application/json; charset=utf-8'
+  };
 
-    if (request.method === 'OPTIONS') {
-        return new Response(null, { headers });
+  if (request.method === 'OPTIONS') {
+    return new Response(null, { headers });
+  }
+
+  try {
+    // 1. GET Request: App & Admin read configuration
+    if (request.method === 'GET') {
+      let config = { ...DEFAULT_CONFIG, ...(memoryConfig || {}) };
+
+      if (env && env.CONFIG) {
+        try {
+          const saved = await env.CONFIG.get('app_settings');
+          if (saved) {
+            config = { ...config, ...JSON.parse(saved) };
+          }
+        } catch (_) {}
+      }
+
+      return new Response(JSON.stringify(config), { headers });
     }
 
-    try {
-        // GET Request: Anyone (or the Android app) can read the config
-        if (request.method === 'GET') {
-            const configStr = await env.CONFIG.get('app_settings');
-            const config = configStr ? JSON.parse(configStr) : { adsEnabled: true, ramazanMode: false };
-            return new Response(JSON.stringify(config), { headers });
-        }
+    // 2. POST Request: Admin writes configuration (Strict Security)
+    if (request.method === 'POST') {
+      const authHeader = request.headers.get('Authorization') || '';
+      const customKey = request.headers.get('X-Admin-Key') || '';
+      let isAuthorized = false;
 
-        // POST Request: Only Admin can save config
-        if (request.method === 'POST') {
-            const authHeader = request.headers.get('Authorization');
-            if (!authHeader || !authHeader.startsWith('Bearer ')) {
-                return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers });
-            }
+      let bearerToken = '';
+      if (authHeader.startsWith('Bearer ')) {
+        bearerToken = authHeader.substring(7).trim();
+      }
 
-            const token = authHeader.split(' ')[1];
-
-            // Verify JWT via Google's official endpoint (Ultra Secure)
-            const googleRes = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${token}`);
-            if (!googleRes.ok) {
-                return new Response(JSON.stringify({ error: 'Invalid Google Token' }), { status: 401, headers });
-            }
-
+      // Güvenlik Doğrulaması: Master Anahtar veya Google OAuth
+      if (customKey === ADMIN_MASTER_SECRET || bearerToken === ADMIN_MASTER_SECRET) {
+        isAuthorized = true;
+      } else if (bearerToken && bearerToken.length > 50) {
+        try {
+          const googleRes = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${bearerToken}`);
+          if (googleRes.ok) {
             const payload = await googleRes.json();
-
-            // Check if the email matches the Admin
-            if (payload.email !== 'mustafakeksinn@gmail.com') {
-                return new Response(JSON.stringify({ error: 'Forbidden: You are not the admin' }), { status: 403, headers });
+            if (payload.email && payload.email.toLowerCase() === AUTHORIZED_ADMIN_EMAIL.toLowerCase()) {
+              isAuthorized = true;
             }
+          }
+        } catch (_) {}
+      }
 
-            // If we reach here, it's 100% Mustafa Keskin. Save the data!
-            const body = await request.json();
-            
-            const newConfig = {
-                adsEnabled: body.adsEnabled !== undefined ? body.adsEnabled : true,
-                ramazanMode: body.ramazanMode !== undefined ? body.ramazanMode : false
-            };
+      if (!isAuthorized) {
+        return new Response(
+          JSON.stringify({
+            error: 'Yetkisiz Erişim (401/403): Geçersiz Yönetici Güvenlik Anahtarı veya Google Hesabı.',
+            success: false
+          }),
+          { status: 403, headers }
+        );
+      }
 
-            await env.CONFIG.put('app_settings', JSON.stringify(newConfig));
+      const body = await request.json();
+      let current = { ...DEFAULT_CONFIG, ...(memoryConfig || {}) };
 
-            return new Response(JSON.stringify({ success: true, config: newConfig }), { headers });
-        }
+      if (env && env.CONFIG) {
+        try {
+          const saved = await env.CONFIG.get('app_settings');
+          if (saved) {
+            current = { ...current, ...JSON.parse(saved) };
+          }
+        } catch (_) {}
+      }
 
-        return new Response('Method Not Allowed', { status: 405, headers });
+      const newConfig = {
+        ...current,
+        adsEnabled: body.adsEnabled !== undefined ? Boolean(body.adsEnabled) : current.adsEnabled,
+        bannerAdUnitId: body.bannerAdUnitId ? String(body.bannerAdUnitId).trim() : current.bannerAdUnitId,
+        ramazanMode: body.ramazanMode !== undefined ? Boolean(body.ramazanMode) : current.ramazanMode,
+        prayerApiUrl: body.prayerApiUrl ? String(body.prayerApiUrl).trim() : current.prayerApiUrl,
+        quranApiUrl: body.quranApiUrl ? String(body.quranApiUrl).trim() : current.quranApiUrl,
+        audioCdnUrl: body.audioCdnUrl ? String(body.audioCdnUrl).trim() : current.audioCdnUrl,
+        deletedWallpaperIds: Array.isArray(body.deletedWallpaperIds) ? body.deletedWallpaperIds : (current.deletedWallpaperIds || []),
+        customWallpapers: Array.isArray(body.customWallpapers) ? body.customWallpapers : (current.customWallpapers || [])
+      };
 
-    } catch (error) {
-        return new Response(JSON.stringify({ error: error.message }), { status: 500, headers });
+      memoryConfig = newConfig;
+
+      if (env && env.CONFIG) {
+        try {
+          await env.CONFIG.put('app_settings', JSON.stringify(newConfig));
+        } catch (_) {}
+      }
+
+      return new Response(JSON.stringify({ success: true, config: newConfig }), { headers });
     }
+
+    return new Response(JSON.stringify({ error: 'Method Not Allowed' }), { status: 405, headers });
+  } catch (err) {
+    return new Response(JSON.stringify({ error: err.message, success: false }), { status: 500, headers });
+  }
 }

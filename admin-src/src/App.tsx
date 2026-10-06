@@ -102,7 +102,8 @@ export const App: React.FC = () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
+          Authorization: `Bearer ${token}`,
+          'X-Admin-Key': token
         },
         body: JSON.stringify(cfg)
       });
@@ -111,10 +112,11 @@ export const App: React.FC = () => {
         showToast(customToast || 'Tüm ayarlar ve değişiklikler başarıyla yayınlandı!');
         setIsOnline(true);
       } else {
-        showToast(customToast || 'Ayarlar yerel olarak kaydedildi ve hazır!');
+        const errData = await res.json().catch(() => ({}));
+        showToast(errData.error || 'Yetkilendirme Hatası: Değişiklikler sunucuya kaydedilemedi.', 'error');
       }
-    } catch (_) {
-      showToast(customToast || 'Ayarlar kaydedildi (Yerel & Senkron mod).');
+    } catch (e: any) {
+      showToast(customToast || 'Ayarlar yerel önbelleğe kaydedildi (Çevrimdışı Mod).', 'error');
       setIsOnline(false);
     }
 

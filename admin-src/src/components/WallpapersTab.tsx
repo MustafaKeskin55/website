@@ -193,7 +193,7 @@ export const WallpapersTab: React.FC<WallpapersTabProps> = ({ wallpapers, onDele
         ) : (
           <div className="wallpaper-grid">
             {wallpapers.map((item) => {
-              const imgSrc = item.imageUrl || `../../app/src/main/assets/wallpapar/${item.fileName}`;
+              const imgSrc = item.imageUrl || `./wallpapar/${item.fileName}`;
               return (
                 <div key={item.id} className="wallpaper-card">
                   <img
@@ -201,8 +201,12 @@ export const WallpapersTab: React.FC<WallpapersTabProps> = ({ wallpapers, onDele
                     src={imgSrc}
                     alt={item.label}
                     onError={(e) => {
-                      (e.target as HTMLImageElement).src =
-                        'https://images.unsplash.com/photo-1542838132-92c53300491e?w=400';
+                      const img = e.target as HTMLImageElement;
+                      if (!img.src.includes('/wallpapar/')) {
+                        img.src = `/wallpapar/${item.fileName}`;
+                      } else {
+                        img.src = 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=400';
+                      }
                     }}
                   />
                   <div className="wallpaper-info">
