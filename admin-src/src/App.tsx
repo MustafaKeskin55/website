@@ -39,14 +39,11 @@ export const App: React.FC = () => {
     }, 3500);
   };
 
-  // Otomatik Canlı Endpoint Seçici (file:// veya localhost'ta dahi doğrudan canlı Cloudflare'e bağlanır)
+  // Canlı Cloudflare API Endpoint
   const getApiEndpoint = (customUrl?: string) => {
     const trimmed = (customUrl || '').trim();
     if (trimmed) return trimmed;
-    if (typeof window !== 'undefined' && (window.location.protocol === 'file:' || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
-      return 'https://muminpusulasi.keskindev.com/api/config';
-    }
-    return '/api/config';
+    return 'https://muminpusulasi.keskindev.com/api/config';
   };
 
   // Sunucudan en güncel ayarları çek

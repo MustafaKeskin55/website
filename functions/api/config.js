@@ -69,9 +69,7 @@ export async function onRequest(context) {
   }
 
   const cache = typeof caches !== 'undefined' ? caches.default : null;
-  const cacheUrl = new URL(request.url);
-  cacheUrl.pathname = '/api/config';
-  cacheUrl.search = '';
+  const canonicalCacheKey = new Request('https://muminpusulasi.keskindev.com/api/config', { method: 'GET' });
 
   try {
     // 1. GET Request: App & Admin read configuration
@@ -89,7 +87,7 @@ export async function onRequest(context) {
       } else if (cache) {
         // B. Cloudflare Edge Cache Kontrolü
         try {
-          const cached = await cache.match(cacheUrl.toString());
+          const cached = await cache.match(canonicalCacheKey);
           if (cached) {
             const cachedData = await cached.json();
             config = { ...config, ...cachedData };
@@ -124,7 +122,7 @@ export async function onRequest(context) {
         } catch (_) {}
       } else if (cache) {
         try {
-          const cached = await cache.match(cacheUrl.toString());
+          const cached = await cache.match(canonicalCacheKey);
           if (cached) {
             const cachedData = await cached.json();
             current = { ...current, ...cachedData };
@@ -163,9 +161,9 @@ export async function onRequest(context) {
             }
           });
           if (context.waitUntil) {
-            context.waitUntil(cache.put(cacheUrl.toString(), cacheRes));
+            context.waitUntil(cache.put(canonicalCacheKey, cacheRes));
           } else {
-            await cache.put(cacheUrl.toString(), cacheRes);
+            await cache.put(canonicalCacheKey, cacheRes);
           }
         } catch (_) {}
       }

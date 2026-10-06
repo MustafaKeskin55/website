@@ -72,9 +72,7 @@ export default {
       }
 
       const cache = typeof caches !== 'undefined' ? caches.default : null;
-      const cacheUrl = new URL(request.url);
-      cacheUrl.pathname = '/api/config';
-      cacheUrl.search = '';
+      const canonicalCacheKey = new Request('https://muminpusulasi.keskindev.com/api/config', { method: 'GET' });
 
       try {
         // 1. GET Request: Android App & Admin Panel read live configuration
@@ -90,7 +88,7 @@ export default {
             } catch (_) {}
           } else if (cache) {
             try {
-              const cached = await cache.match(cacheUrl.toString());
+              const cached = await cache.match(canonicalCacheKey);
               if (cached) {
                 const cachedData = await cached.json();
                 config = { ...config, ...cachedData };
@@ -125,7 +123,7 @@ export default {
             } catch (_) {}
           } else if (cache) {
             try {
-              const cached = await cache.match(cacheUrl.toString());
+              const cached = await cache.match(canonicalCacheKey);
               if (cached) {
                 const cachedData = await cached.json();
                 current = { ...current, ...cachedData };
@@ -162,9 +160,9 @@ export default {
                 }
               });
               if (ctx && ctx.waitUntil) {
-                ctx.waitUntil(cache.put(cacheUrl.toString(), cacheRes));
+                ctx.waitUntil(cache.put(canonicalCacheKey, cacheRes));
               } else {
-                await cache.put(cacheUrl.toString(), cacheRes);
+                await cache.put(canonicalCacheKey, cacheRes);
               }
             } catch (_) {}
           }
