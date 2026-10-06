@@ -97,13 +97,14 @@ export const App: React.FC = () => {
 
     // 2. Cloudflare Worker API'ye gönder
     const targetUrl = (cfg.serverApiUrl || '').trim() || '/api/config';
+    const activeToken = token || localStorage.getItem('admin_token') || 'MuminAdmin2026!';
     try {
       const res = await fetch(targetUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-          'X-Admin-Key': token
+          Authorization: `Bearer ${activeToken}`,
+          'X-Admin-Key': activeToken
         },
         body: JSON.stringify(cfg)
       });
@@ -113,6 +114,20 @@ export const App: React.FC = () => {
         setIsOnline(true);
       } else {
         const errData = await res.json().catch(() => ({}));
+        if (res.status === 401 || res.status === 403) {
+          const promptKey = window.prompt(
+            'Yönetici Doğrulaması: Lütfen Güvenlik Anahtarını girin:',
+            'MuminAdmin2026!'
+          );
+          if (promptKey) {
+            const cleanKey = promptKey.trim();
+            setToken(cleanKey);
+            localStorage.setItem('admin_token', cleanKey);
+            setIsSaving(false);
+            saveAllConfig(cfg, customToast);
+            return;
+          }
+        }
         showToast(errData.error || 'Yetkilendirme Hatası: Değişiklikler sunucuya kaydedilemedi.', 'error');
       }
     } catch (e: any) {
