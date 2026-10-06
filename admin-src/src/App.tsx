@@ -39,22 +39,33 @@ export const App: React.FC = () => {
     }, 3500);
   };
 
-  // Sunucudan (Worker) en güncel ayarları çek
+  // Otomatik Canlı Endpoint Seçici (file:// veya localhost'ta dahi doğrudan canlı Cloudflare'e bağlanır)
+  const getApiEndpoint = (customUrl?: string) => {
+    const trimmed = (customUrl || '').trim();
+    if (trimmed) return trimmed;
+    if (typeof window !== 'undefined' && (window.location.protocol === 'file:' || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
+      return 'https://muminpusulasi.keskindev.com/api/config';
+    }
+    return '/api/config';
+  };
+
+  // Sunucudan en güncel ayarları çek
   const fetchServerConfig = async () => {
-    const targetUrl = (config.serverApiUrl || '').trim() || '/api/config';
+    const targetUrl = getApiEndpoint(config.serverApiUrl);
     try {
       const res = await fetch(targetUrl);
       if (res.ok) {
         const serverData = await res.json();
         setConfig((prev) => {
           const merged = { ...prev, ...serverData };
-          localStorage.setItem('mumin_admin_config', JSON.stringify(merged));
+          try {
+            localStorage.setItem('mumin_admin_config', JSON.stringify(merged));
+          } catch (_) {}
           return merged;
         });
         setIsOnline(true);
       }
     } catch (_) {
-      // Çevrimdışı veya yerel mod
       setIsOnline(false);
     }
   };
@@ -92,11 +103,13 @@ export const App: React.FC = () => {
     const cfg = overrideConfig || config;
     setIsSaving(true);
 
-    // 1. Yerel önbelleğe yaz (anında tepki)
-    localStorage.setItem('mumin_admin_config', JSON.stringify(cfg));
+    // 1. Yerel önbelleğe yaz (güvenli)
+    try {
+      localStorage.setItem('mumin_admin_config', JSON.stringify(cfg));
+    } catch (_) {}
 
-    // 2. Cloudflare Worker API'ye gönder
-    const targetUrl = (cfg.serverApiUrl || '').trim() || '/api/config';
+    // 2. Canlı Sunucuya Gönder
+    const targetUrl = getApiEndpoint(cfg.serverApiUrl);
     const activeToken = token || localStorage.getItem('admin_token') || 'MuminAdmin2026!';
     try {
       const res = await fetch(targetUrl, {

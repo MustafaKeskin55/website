@@ -21,16 +21,51 @@ export const WallpapersTab: React.FC<WallpapersTabProps> = ({ wallpapers, onDele
     const file = e.target.files?.[0];
     if (!file) return;
 
+    if (!title.trim()) {
+      const cleanName = file.name.replace(/\.[^/.]+$/, '').replace(/[_-]/g, ' ');
+      setTitle(cleanName);
+    }
+
     const reader = new FileReader();
     reader.onload = (event) => {
-      const result = event.target?.result as string;
-      setFileData(result);
-      if (!title.trim()) {
-        const cleanName = file.name.replace(/\.[^/.]+$/, '').replace(/[_-]/g, ' ');
-        setTitle(cleanName);
-      }
+      const rawDataUrl = event.target?.result as string;
+      // Otomatik Canvas Sıkıştırma (Mobil Boyut: Max 960px, ~50-80 KB)
+      const img = new window.Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+        const maxDimension = 960;
+
+        if (width > height && width > maxDimension) {
+          height = Math.round((height * maxDimension) / width);
+          width = maxDimension;
+        } else if (height > maxDimension) {
+          width = Math.round((width * maxDimension) / height);
+          height = maxDimension;
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, width, height);
+          const compressed = canvas.toDataURL('image/jpeg', 0.75);
+          setFileData(compressed);
+        } else {
+          setFileData(rawDataUrl);
+        }
+      };
+      img.src = rawDataUrl;
     };
     reader.readAsDataURL(file);
+  };
+
+  const handleUsePreset = (presetUrl: string, presetTitle: string, presetEmoji: string) => {
+    setImageUrl(presetUrl);
+    setFileData('');
+    setTitle(presetTitle);
+    setEmoji(presetEmoji);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -112,6 +147,30 @@ export const WallpapersTab: React.FC<WallpapersTabProps> = ({ wallpapers, onDele
                   setFileData('');
                 }}
               />
+              <div style={{ display: 'flex', gap: '8px', marginTop: '6px', flexWrap: 'wrap' }}>
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', alignSelf: 'center' }}>Hızlı Örnekler:</span>
+                <button
+                  type="button"
+                  onClick={() => handleUsePreset('https://images.unsplash.com/photo-1542838132-92c53300491e?w=800', 'Mescid-i Nebevi Gece', '🕌')}
+                  style={{ fontSize: '0.72rem', padding: '3px 8px', borderRadius: '6px', background: 'rgba(212,175,55,0.1)', border: '1px solid rgba(212,175,55,0.3)', color: 'var(--gold)', cursor: 'pointer' }}
+                >
+                  🕌 Medine
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleUsePreset('https://images.unsplash.com/photo-1591604129939-f1efa4d9f7fa?w=800', 'Kâbe-i Muazzama Sabah', '🕋')}
+                  style={{ fontSize: '0.72rem', padding: '3px 8px', borderRadius: '6px', background: 'rgba(212,175,55,0.1)', border: '1px solid rgba(212,175,55,0.3)', color: 'var(--gold)', cursor: 'pointer' }}
+                >
+                  🕋 Kâbe
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleUsePreset('https://images.unsplash.com/photo-1564769625905-50e93615e769?w=800', 'Hilal ve Kubbe', '🌙')}
+                  style={{ fontSize: '0.72rem', padding: '3px 8px', borderRadius: '6px', background: 'rgba(212,175,55,0.1)', border: '1px solid rgba(212,175,55,0.3)', color: 'var(--gold)', cursor: 'pointer' }}
+                >
+                  🌙 Hilal
+                </button>
+              </div>
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '12px', marginTop: '12px' }}>
