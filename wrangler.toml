@@ -4,3 +4,8 @@ compatibility_date = "2024-09-23"
 
 [assets]
 directory = "."
+
+[[d1_databases]]
+binding = "DB"
+database_name = "muminpusulasi"
+database_id = "d8769154-dfcd-4db7-ad19-98b7f54160b1"

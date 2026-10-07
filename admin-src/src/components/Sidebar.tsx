@@ -1,5 +1,5 @@
 import React from 'react';
-import { Compass, PieChart, Image, Network, Megaphone, LogOut, CheckCircle } from 'lucide-react';
+import { Compass, PieChart, Image, Network, Megaphone, LogOut, CheckCircle, Users } from 'lucide-react';
 import { TabKey, AdminUser } from '../types';
 
 interface SidebarProps {
@@ -24,6 +24,14 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange, user, 
         >
           <PieChart size={18} />
           <span>Genel Bakış</span>
+        </button>
+
+        <button
+          className={`nav-item ${activeTab === 'members' ? 'active' : ''}`}
+          onClick={() => onTabChange('members')}
+        >
+          <Users size={18} />
+          <span>Üyeler</span>
         </button>
 
         <button

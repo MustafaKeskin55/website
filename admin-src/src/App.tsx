@@ -7,6 +7,7 @@ import { OverviewTab } from './components/OverviewTab';
 import { WallpapersTab } from './components/WallpapersTab';
 import { ApisTab } from './components/ApisTab';
 import { AdsTab } from './components/AdsTab';
+import { MembersTab } from './components/MembersTab';
 import { Toast } from './components/Toast';
 import { LoginScreen, decodeJwtPayload, AUTHORIZED_ADMIN_EMAIL } from './components/LoginScreen';
 
@@ -251,6 +252,13 @@ export const App: React.FC = () => {
             config={config}
             wallpapers={activeWallpapers}
             onNavigate={setActiveTab}
+          />
+        )}
+
+        {activeTab === 'members' && (
+          <MembersTab
+            token={token}
+            apiUrl={getApiEndpoint(config.serverApiUrl)}
           />
         )}
 

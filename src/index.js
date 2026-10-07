@@ -1,6 +1,8 @@
 // Cloudflare Worker entry point for website & Mümin Pusulası API
 // Live Remote Config & Assets handler with strict security & Edge Cache persistence
 
+import { handleRegister, handleAdminMembers } from './members.js';
+
 let memoryConfig = null;
 
 const DEFAULT_CONFIG = {
@@ -98,19 +100,28 @@ export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
 
+    // ── API: CORS Headers ──────────────────────────────────────────────────────
+    const headers = {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Admin-Key',
+      'Content-Type': 'application/json; charset=utf-8'
+    };
+
+    if (request.method === 'OPTIONS') {
+      return new Response(null, { headers });
+    }
+
+    if (url.pathname.startsWith('/api/admin/members')) {
+      return handleAdminMembers(request, url, env, headers);
+    }
+
+    if (url.pathname === '/api/members/google') {
+      return handleRegister(request, env, ctx, headers);
+    }
+
     // ── API: /api/config ───────────────────────────────────────────────────────
     if (url.pathname === '/api/config') {
-      const headers = {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Admin-Key',
-        'Content-Type': 'application/json; charset=utf-8'
-      };
-
-      if (request.method === 'OPTIONS') {
-        return new Response(null, { headers });
-      }
-
       const cache = typeof caches !== 'undefined' ? caches.default : null;
       const canonicalCacheKey = new Request('https://muminpusulasi.keskindev.com/api/config', { method: 'GET' });
 
@@ -214,7 +225,7 @@ export default {
       } catch (err) {
         return new Response(JSON.stringify({ error: err.message, success: false }), { status: 500, headers });
       }
-    }
+    } // Close if (url.pathname === '/api/config')
 
     // ── Static Assets (Web Sitesi, Admin Paneli ve Görseller) ───────────────────
     if (env.ASSETS) {

@@ -25,4 +25,4 @@ export interface AdminUser {
   picture: string;
 }
 
-export type TabKey = 'overview' | 'wallpapers' | 'apis' | 'ads';
+export type TabKey = 'overview' | 'wallpapers' | 'apis' | 'ads' | 'members';
