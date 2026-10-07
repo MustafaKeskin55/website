@@ -102,7 +102,7 @@ export const WallpapersTab: React.FC<WallpapersTabProps> = ({ wallpapers, onDele
 
   return (
     <div>
-      <div className="controls-grid" style={{ gridTemplateColumns: '1.2fr 0.8fr' }}>
+      <div className="controls-grid wallpapers-layout">
         
         {/* Yeni Duvar Kağıdı Ekle Formu */}
         <div className="control-panel">
@@ -173,7 +173,7 @@ export const WallpapersTab: React.FC<WallpapersTabProps> = ({ wallpapers, onDele
               </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '12px', marginTop: '12px' }}>
+            <div className="title-emoji-grid">
               <div className="input-group">
                 <label>Görsel Başlığı / Adı</label>
                 <input

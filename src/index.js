@@ -14,44 +14,84 @@ const DEFAULT_CONFIG = {
   customWallpapers: []
 };
 
-const VALID_ADMIN_KEYS = new Set([
-  "MuminAdmin2026!",
-  "mustafakeskin2026",
-  "admin_local_token",
-  "admin_master_key"
-]);
 const AUTHORIZED_ADMIN_EMAIL = "mustafakeksinn@gmail.com";
+const GOOGLE_CLIENT_ID = "93580675475-1asn8uudfa8pl2oe4ffg2lnib9o70flq.apps.googleusercontent.com";
 
-function isRequestAuthorized(request) {
+let googleKeysCache = { keys: null, expiresAt: 0 };
+
+function b64urlToBytes(str) {
+  const b64 = str.replace(/-/g, '+').replace(/_/g, '/');
+  const padded = b64 + '='.repeat((4 - (b64.length % 4)) % 4);
+  const bin = atob(padded);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return bytes;
+}
+
+async function getGoogleKeys(forceRefresh = false) {
+  if (!forceRefresh && googleKeysCache.keys && Date.now() < googleKeysCache.expiresAt) {
+    return googleKeysCache.keys;
+  }
+  const res = await fetch('https://www.googleapis.com/oauth2/v3/certs');
+  if (!res.ok) throw new Error('Google anahtarları alınamadı');
+  const data = await res.json();
+  googleKeysCache = { keys: data.keys || [], expiresAt: Date.now() + 60 * 60 * 1000 };
+  return googleKeysCache.keys;
+}
+
+// Google ID Token: imza (RS256), issuer, audience, süre ve e-posta doğrulaması
+async function verifyGoogleIdToken(token) {
+  const parts = token.split('.');
+  if (parts.length !== 3) return false;
+
+  const header = JSON.parse(new TextDecoder().decode(b64urlToBytes(parts[0])));
+  if (header.alg !== 'RS256' || !header.kid) return false;
+
+  let keys = await getGoogleKeys();
+  let jwk = keys.find((k) => k.kid === header.kid);
+  if (!jwk) {
+    keys = await getGoogleKeys(true);
+    jwk = keys.find((k) => k.kid === header.kid);
+  }
+  if (!jwk) return false;
+
+  const cryptoKey = await crypto.subtle.importKey(
+    'jwk',
+    jwk,
+    { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' },
+    false,
+    ['verify']
+  );
+  const valid = await crypto.subtle.verify(
+    'RSASSA-PKCS1-v1_5',
+    cryptoKey,
+    b64urlToBytes(parts[2]),
+    new TextEncoder().encode(parts[0] + '.' + parts[1])
+  );
+  if (!valid) return false;
+
+  const payload = JSON.parse(new TextDecoder().decode(b64urlToBytes(parts[1])));
+  const now = Math.floor(Date.now() / 1000);
+  return (
+    (payload.iss === 'accounts.google.com' || payload.iss === 'https://accounts.google.com') &&
+    payload.aud === GOOGLE_CLIENT_ID &&
+    payload.exp > now &&
+    payload.email_verified === true &&
+    typeof payload.email === 'string' &&
+    payload.email.toLowerCase() === AUTHORIZED_ADMIN_EMAIL.toLowerCase()
+  );
+}
+
+async function isRequestAuthorized(request) {
   const authHeader = request.headers.get('Authorization') || '';
-  const customKey = (request.headers.get('X-Admin-Key') || '').trim();
-  let bearerToken = '';
-  if (authHeader.startsWith('Bearer ')) {
-    bearerToken = authHeader.substring(7).trim();
+  if (!authHeader.startsWith('Bearer ')) return false;
+  const token = authHeader.substring(7).trim();
+  if (!token) return false;
+  try {
+    return await verifyGoogleIdToken(token);
+  } catch (_) {
+    return false;
   }
-
-  // 1. Master Güvenlik Anahtarı veya Token Kontrolü
-  if (VALID_ADMIN_KEYS.has(customKey) || VALID_ADMIN_KEYS.has(bearerToken)) {
-    return true;
-  }
-
-  // 2. Google OAuth JWT Doğrulaması
-  const candidateToken = bearerToken || customKey;
-  if (candidateToken && candidateToken.includes('.')) {
-    try {
-      const parts = candidateToken.split('.');
-      if (parts.length >= 2) {
-        const b64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
-        const jsonStr = atob(b64);
-        const payload = JSON.parse(jsonStr);
-        if (payload.email && payload.email.toLowerCase() === AUTHORIZED_ADMIN_EMAIL.toLowerCase()) {
-          return true;
-        }
-      }
-    } catch (_) {}
-  }
-
-  return false;
 }
 
 export default {
@@ -101,10 +141,10 @@ export default {
 
         // 2. POST Request: Admin Panel updates configuration (Strict Security)
         if (request.method === 'POST') {
-          if (!isRequestAuthorized(request)) {
+          if (!(await isRequestAuthorized(request))) {
             return new Response(
               JSON.stringify({
-                error: 'Yetkisiz Erişim (401/403): Geçersiz Yönetici Güvenlik Anahtarı veya Google Hesabı.',
+                error: 'Oturum geçersiz veya süresi doldu. Lütfen Google ile tekrar giriş yapın.',
                 success: false
               }),
               { status: 403, headers }

@@ -227,28 +227,17 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({ config, wallpapers, on
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
           {services.map((srv, idx) => (
-            <div
-              key={idx}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                padding: '12px 16px',
-                background: 'rgba(0,0,0,0.3)',
-                borderRadius: '12px',
-                border: '1px solid rgba(255,255,255,0.06)'
-              }}
-            >
-              <div>
-                <div style={{ fontWeight: 600, fontSize: '0.92rem', color: '#fff', marginBottom: '2px' }}>
+            <div key={idx} className="service-row">
+              <div className="service-info">
+                <div className="service-name">
                   {srv.name}
                 </div>
-                <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontFamily: 'monospace' }}>
+                <div className="service-url">
                   {srv.url}
                 </div>
               </div>
 
-              <div style={{ textAlign: 'right' }}>
+              <div className="service-status">
                 {srv.status === 'checking' && (
                   <span style={{ fontSize: '0.82rem', color: '#F59E0B' }}>Test Ediliyor...</span>
                 )}
@@ -276,7 +265,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({ config, wallpapers, on
         <div className="panel-title">
           <span><Zap size={20} /> Yönetim Menüsü</span>
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px' }}>
+        <div className="quick-actions">
           <button className="btn" onClick={() => onNavigate('wallpapers')}>
             <Image size={18} /> Duvar Kağıtlarını Düzenle
           </button>

@@ -55,6 +55,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange, user, 
         <img
           src={user.picture || 'https://www.gravatar.com/avatar/?d=mp'}
           alt={user.name}
+          referrerPolicy="no-referrer"
           onError={(e) => {
             (e.target as HTMLImageElement).src = 'https://www.gravatar.com/avatar/?d=mp';
           }}
