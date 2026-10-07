@@ -4,6 +4,7 @@
 // kullanır, bu yüzden her iki istemcinin token'ında `aud` aynıdır.
 
 export const GOOGLE_CLIENT_ID = '93580675475-1asn8uudfa8pl2oe4ffg2lnib9o70flq.apps.googleusercontent.com';
+export const ANDROID_CLIENT_ID = '93580675475-fm4h6qpiudf8sagif8usrkej0n9ra8ft.apps.googleusercontent.com';
 export const AUTHORIZED_ADMIN_EMAIL = 'mustafakeksinn@gmail.com';
 
 let googleKeysCache = { keys: null, expiresAt: 0 };
@@ -66,7 +67,10 @@ export async function verifyGoogleIdToken(token) {
     const payload = JSON.parse(new TextDecoder().decode(b64urlToBytes(parts[1])));
     const now = Math.floor(Date.now() / 1000);
     const issuerOk = payload.iss === 'accounts.google.com' || payload.iss === 'https://accounts.google.com';
-    if (!issuerOk || payload.aud !== GOOGLE_CLIENT_ID || !(payload.exp > now)) return null;
+    const audOk = payload.aud === GOOGLE_CLIENT_ID ||
+                  payload.aud === ANDROID_CLIENT_ID ||
+                  (typeof payload.aud === 'string' && payload.aud.startsWith('93580675475-'));
+    if (!issuerOk || !audOk || !(payload.exp > now)) return null;
     if (typeof payload.sub !== 'string' || typeof payload.email !== 'string') return null;
     if (payload.email_verified !== true) return null;
 
